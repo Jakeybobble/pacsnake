@@ -16,7 +16,11 @@ impl Plugin for GamePlugin {
 
         app.add_systems(Startup, setup);
         app.add_systems(OnEnter(GameState::InGame), on_enter_game);
-        app.add_systems(Update, (update_player_rotation, update_player_movement).chain());
+        app.add_systems(
+            Update,
+            (update_player_rotation, update_player_movement).chain(),
+        );
+        app.add_systems(Update, update_sprite_animation);
     }
 }
 
@@ -24,6 +28,15 @@ impl Plugin for GamePlugin {
 
 #[derive(Component)]
 pub struct Player;
+
+#[derive(Component)]
+struct AnimationIndices {
+    first: usize,
+    last: usize,
+}
+
+#[derive(Component, Deref, DerefMut)]
+struct AnimationTimer(Timer);
 
 /// On app start...
 fn setup(mut commands: Commands) {
@@ -57,6 +70,8 @@ fn on_enter_game(
                 index: 0,
             },
         ),
+        AnimationIndices { first: 0, last: 1 },
+        AnimationTimer(Timer::from_seconds(0.15, TimerMode::Repeating)),
     ));
 }
 
@@ -85,6 +100,7 @@ fn update_player_rotation(
 }
 
 fn update_player_movement(mut query: Query<&mut Transform, With<Player>>, time: Res<Time>) {
+    // TODO: Boundaries
     for mut transform in query.iter_mut() {
         let dt = time.delta_secs();
 
@@ -92,5 +108,24 @@ fn update_player_movement(mut query: Query<&mut Transform, With<Player>>, time: 
         let movement_distance = PLAYER_SPEED * dt;
         let translation_delta = movement_direction * movement_distance;
         transform.translation += translation_delta;
+    }
+}
+
+fn update_sprite_animation(
+    time: Res<Time>,
+    mut query: Query<(&AnimationIndices, &mut AnimationTimer, &mut Sprite)>,
+) {
+    for (indices, mut timer, mut sprite) in &mut query {
+        timer.tick(time.delta());
+
+        if timer.just_finished()
+            && let Some(atlas) = &mut sprite.texture_atlas
+        {
+            atlas.index = if atlas.index == indices.last {
+                indices.first
+            } else {
+                atlas.index + 1
+            };
+        }
     }
 }
