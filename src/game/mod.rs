@@ -1,5 +1,9 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 
+use crate::game::ghost::{SpawnGhost, ghost_plugin};
+
+mod ghost;
+
 const CAMERA_SCALE: f32 = 3.0;
 const PLAYER_SPEED: f32 = 80.;
 
@@ -21,6 +25,8 @@ impl Plugin for GamePlugin {
             (update_player_rotation, update_player_movement).chain(),
         );
         app.add_systems(Update, update_sprite_animation);
+
+        app.add_plugins(ghost_plugin);
     }
 }
 
@@ -73,6 +79,10 @@ fn on_enter_game(
         AnimationIndices { first: 0, last: 1 },
         AnimationTimer(Timer::from_seconds(0.15, TimerMode::Repeating)),
     ));
+
+    // TODO: This is temporary.
+    commands.trigger(SpawnGhost(Vec2::new(-50., 0.)));
+    
 }
 
 // TODO: Control scheme enum resource
