@@ -1,6 +1,7 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 
 const CAMERA_SCALE: f32 = 3.0;
+const PLAYER_SPEED: f32 = 80.;
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
 enum GameState {
@@ -15,7 +16,7 @@ impl Plugin for GamePlugin {
 
         app.add_systems(Startup, setup);
         app.add_systems(OnEnter(GameState::InGame), on_enter_game);
-        app.add_systems(Update, update_rotation);
+        app.add_systems(Update, (update_player_rotation, update_player_movement).chain());
     }
 }
 
@@ -60,7 +61,7 @@ fn on_enter_game(
 }
 
 // TODO: Control scheme enum resource
-fn update_rotation(
+fn update_player_rotation(
     window: Single<&Window, With<PrimaryWindow>>,
     mut query: Query<&mut Transform, With<Player>>,
     camera: Query<(&Camera, &GlobalTransform)>,
@@ -80,5 +81,16 @@ fn update_rotation(
         let angle = Vec2::X.angle_to(target_pos - pos);
 
         transform.rotation = Quat::from_rotation_z(angle);
+    }
+}
+
+fn update_player_movement(mut query: Query<&mut Transform, With<Player>>, time: Res<Time>) {
+    for mut transform in query.iter_mut() {
+        let dt = time.delta_secs();
+
+        let movement_direction = (transform.rotation * Vec3::X).normalize();
+        let movement_distance = PLAYER_SPEED * dt;
+        let translation_delta = movement_direction * movement_distance;
+        transform.translation += translation_delta;
     }
 }
